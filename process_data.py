@@ -5,11 +5,6 @@ import pprint
 import codecs
 import json
 
-# Audit street names -> fix suffixes
-# Some street names include suite/apartment numbers (e.g. 2B, Suite 500)
-# Some street names are intersections "x and y", "x & y" or "x between y"
-# Some street names are duplicated "abc; xyz"
-
 lower = re.compile(r'^([a-z]|_)*$')
 lower_colon = re.compile(r'^([a-z]|_)*:([a-z]|_)*$')
 problemchars = re.compile(r'[=\+/&<>;\'"\?%#$@\,\. \t\r\n]')
