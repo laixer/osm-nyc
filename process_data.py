@@ -139,13 +139,7 @@ def process_map(file_in, dry_run=False):
                     if "street" in el["address"]:
                         el["address"]["street"] = clean_street_type(
                             street_types, el["address"]["street"], street_name_cleaners)
-                    if "postcode" in el["address"]:
-                        el["address"]["postcode"] = clean_postcode(el["address"]["postcode"])
-                        postcode_short = el["address"]["postcode"]
-                        zipcode_m = ZIPCODE_RE.search(postcode_short)
-                        if zipcode_m:
-                            postcode_short = zipcode_m.group(2)
-                        city = el["address"].get("city", None)
+                    if "state" in el["address"]:
                         state = el["address"].get("state", None)
                         if state:
                             state = state.upper()
@@ -156,6 +150,14 @@ def process_map(file_in, dry_run=False):
                             elif state == 'CONNECTICUT':
                                 state = 'CT'
                             el["address"]["state"] = state
+                    if "postcode" in el["address"]:
+                        el["address"]["postcode"] = clean_postcode(el["address"]["postcode"])
+                        postcode_short = el["address"]["postcode"]
+                        zipcode_m = ZIPCODE_RE.search(postcode_short)
+                        if zipcode_m:
+                            postcode_short = zipcode_m.group(2)
+                        city = el["address"].get("city", None)
+                        state = el["address"].get("state", None)
                         zipcode_data = zipcode_map.get(postcode_short, None)
                         if zipcode_data:
                             if city and city != zipcode_data.city:
