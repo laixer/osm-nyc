@@ -11,7 +11,7 @@ lower_colon = re.compile(r'^([a-z]|_)*:([a-z]|_)*$')
 problemchars = re.compile(r'[=\+/&<>;\'"\?%#$@\,\. \t\r\n]')
 
 CREATED_FIELDS = ['version', "changeset", 'timestamp', 'user', 'uid']
-INCLUDE_TAGS = ['name', 'cuisine']
+INCLUDE_TAGS = ['name', 'amenity', 'cuisine', 'shop']
 
 STREET_TYPE_RE = re.compile(r'^(.*?)\b(\S+\.?)$', re.IGNORECASE)
 ZIPCODE_RE = re.compile(r'(\D*?)(\d{5})')
