@@ -127,9 +127,10 @@ def process_map(file_in):
     city_mismatches_by_zip = defaultdict(set)
     state_mismatches_by_zip = defaultdict(set)
     unknown_zips = set()
+    doc_structure = defaultdict(set)
 
     for _, element in ElementTree.iterparse(file_in):
-        el = shape_element(element)
+        el = shape_element(element, doc_structure)
         if el:
             if "address" in el:
                 if "street" in el["address"]:
@@ -168,6 +169,11 @@ def process_map(file_in):
 
     print('')
     print('')
+    print('Document structure:')
+    pprint.pprint(dict(doc_structure))
+
+    print('')
+    print('')
     print('Unclassified streets:')
     pprint.pprint(dict(street_types))
 
@@ -189,21 +195,27 @@ def process_map(file_in):
     pprint.pprint(unknown_zips)
 
 
-def shape_element(element):
+def shape_element(element, doc_structure):
     node = {}
+    attribs = list(element.attrib.iteritems())
+    doc_structure[element.tag].update(['attrib:' + kv[0] for kv in attribs])
+    tags = []
+    for el in element.iter('tag'):
+        k = el.attrib['k']
+        v = el.attrib['v']
+        tags.append((k, v))
+    doc_structure[element.tag].update(['tag:' + kv[0] for kv in tags])
     if element.tag == 'node' or element.tag == 'way':
         node['type'] = element.tag
         node['created'] = {}
-        for k, v in element.attrib.iteritems():
+        for k, v in attribs:
             if k in CREATED:
                 node['created'][k] = v
             elif k != 'lat' and k != 'lon':
                 node[k] = v
         if 'lat' in element.attrib and 'lon' in element.attrib:
             node['pos'] = [float(element.attrib['lat']), float(element.attrib['lon'])]
-        for el in element.iter('tag'):
-            k = el.attrib['k']
-            v = el.attrib['v']
+        for k, v in tags:
             if not problemchars.search(k):
                 if k.startswith('addr:'):
                     if 'address' not in node:
@@ -240,6 +252,6 @@ def main(in_file, out_file, dry_run=False):
     print('Done processing.')
 
 if __name__ == '__main__':
-    main('new-york_new-york.osm', 'new-york_new-york.json', dry_run=True)
+    main('new-york_new-york.osm', 'new-york_new-york.json', dry_run=False)
 
 
