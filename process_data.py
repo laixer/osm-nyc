@@ -10,7 +10,8 @@ lower = re.compile(r'^([a-z]|_)*$')
 lower_colon = re.compile(r'^([a-z]|_)*:([a-z]|_)*$')
 problemchars = re.compile(r'[=\+/&<>;\'"\?%#$@\,\. \t\r\n]')
 
-CREATED = ['version', "changeset", 'timestamp', 'user', 'uid']
+CREATED_FIELDS = ['version', "changeset", 'timestamp', 'user', 'uid']
+INCLUDE_TAGS = ['name', 'cuisine']
 
 STREET_TYPE_RE = re.compile(r'^(.*?)\b(\S+\.?)$', re.IGNORECASE)
 ZIPCODE_RE = re.compile(r'(\D*?)(\d{5})')
@@ -209,7 +210,7 @@ def shape_element(element, doc_structure):
         node['type'] = element.tag
         node['created'] = {}
         for k, v in attribs:
-            if k in CREATED:
+            if k in CREATED_FIELDS:
                 node['created'][k] = v
             elif k != 'lat' and k != 'lon':
                 node[k] = v
@@ -217,6 +218,8 @@ def shape_element(element, doc_structure):
             node['pos'] = [float(element.attrib['lat']), float(element.attrib['lon'])]
         for k, v in tags:
             if not problemchars.search(k):
+                if k in INCLUDE_TAGS:
+                    node[k] = v
                 if k.startswith('addr:'):
                     if 'address' not in node:
                         node['address'] = {}
@@ -245,7 +248,7 @@ def main(in_file, out_file, dry_run=False):
         it = process_map(in_file)
         for el in it:
             if f:
-                f.write(json.dumps(el))
+                f.write(json.dumps(el) + '\n')
     finally:
         if f:
             f.close()
