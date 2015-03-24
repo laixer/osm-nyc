@@ -6,19 +6,24 @@ import pprint
 import codecs
 import json
 
-lower = re.compile(r'^([a-z]|_)*$')
-lower_colon = re.compile(r'^([a-z]|_)*:([a-z]|_)*$')
-problemchars = re.compile(r'[=\+/&<>;\'"\?%#$@\,\. \t\r\n]')
+# Characters that may not appear in a key.
+INVALID_KEY_CHARS = re.compile(r'[=\+/&<>;\'"\?%#$@\,\. \t\r\n]')
 
+# Fields that we want to include in the 'created' sub-document.
 CREATED_FIELDS = ['version', "changeset", 'timestamp', 'user', 'uid']
+# OSM tags that should be included in the JSON output.
 INCLUDE_TAGS = ['name', 'amenity', 'cuisine', 'shop']
 
+# Regexp for parsing street name/type.
 STREET_TYPE_RE = re.compile(r'^(.*?)\b(\S+\.?)$', re.IGNORECASE)
+# Regexp for parsing zip codes (ignore any string prefix and take at most 5 digits).
 ZIPCODE_RE = re.compile(r'(\D*?)(\d{5})')
 
 ZipCodeData = namedtuple('ZipCodeData', ['city', 'state'])
 
+
 class StreetNameCanonicalSuffixCleaner(object):
+    """Cleaner that maps common street suffixes to their canonical representations."""
     _STREET_SUFFIX_ALTERNATIVES = {
         'Alley': {},
         'Americas': {},  # Avenue of the Americas
@@ -56,9 +61,7 @@ class StreetNameCanonicalSuffixCleaner(object):
     }
 
     def build_street_canonical_suffix_map(self):
-        """
-        Builds a map of street suffixes to their canonical representations.
-        """
+        """Builds a map of street suffixes to their canonical representations."""
         canonical_suffix_map = {}
         for canonical_suffix, alternative_suffixes in self._STREET_SUFFIX_ALTERNATIVES.iteritems():
             # Map canonical suffix to itself for convenience.
@@ -80,6 +83,7 @@ class StreetNameCanonicalSuffixCleaner(object):
 
 
 class StreetNameAvenueXCleaner(object):
+    """Cleaner that takes care of "Avenue X" style street names found in NYC."""
     _ALPHABET_AVE_RE = re.compile('^Avenue ([A-Z])$', re.IGNORECASE)
 
     def clean(self, street_name):
@@ -105,6 +109,7 @@ def clean_street_type(street_types, street_name, cleaners):
 
 
 def load_zipcode_data():
+    """Loads zipcode information data from zipcode.csv file and returns map keyed by zipcode."""
     zipcode_map = {}
     with open('zipcode.csv') as csvfile:
         reader = csv.DictReader(csvfile)
@@ -121,6 +126,7 @@ def clean_postcode(postcode):
 
 
 def process_map(file_in):
+    """Processes given OSM file and yields parsed structures."""
     street_types = defaultdict(set)
     street_name_cleaners = [StreetNameCanonicalSuffixCleaner(), StreetNameAvenueXCleaner()]
 
@@ -137,6 +143,8 @@ def process_map(file_in):
                 if "street" in el["address"]:
                     el["address"]["street"] = clean_street_type(
                         street_types, el["address"]["street"], street_name_cleaners)
+                # Normalize state.
+                # TODO(laixer): Separate state mappings.
                 if "state" in el["address"]:
                     state = el["address"].get("state", None)
                     if state:
@@ -148,6 +156,8 @@ def process_map(file_in):
                         elif state == 'CONNECTICUT':
                             state = 'CT'
                         el["address"]["state"] = state
+                # Compare zipcode/city/state information to zipcode database and report any mismatches.
+                # If zipcode is present in zipcode database, replace existing information using database.
                 if "postcode" in el["address"]:
                     el["address"]["postcode"] = clean_postcode(el["address"]["postcode"])
                     postcode_short = el["address"]["postcode"]
@@ -197,6 +207,7 @@ def process_map(file_in):
 
 
 def shape_element(element, doc_structure):
+    """Extracts information from given XML element and shapes into a standard format."""
     node = {}
     attribs = list(element.attrib.iteritems())
     doc_structure[element.tag].update(['attrib:' + kv[0] for kv in attribs])
@@ -217,7 +228,7 @@ def shape_element(element, doc_structure):
         if 'lat' in element.attrib and 'lon' in element.attrib:
             node['pos'] = [float(element.attrib['lat']), float(element.attrib['lon'])]
         for k, v in tags:
-            if not problemchars.search(k):
+            if not INVALID_KEY_CHARS.search(k):
                 if k in INCLUDE_TAGS:
                     node[k] = v
                 if k.startswith('addr:'):
