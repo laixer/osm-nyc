@@ -165,22 +165,26 @@ def process_map(file_in):
                     else:
                         unknown_zips.add(postcode_short)
             yield el
-    # print('')
-    # print('')
-    # print('Unclassified streets:')
-    # pprint.pprint(dict(street_types))
 
     print('')
     print('')
+    print('Unclassified streets:')
+    pprint.pprint(dict(street_types))
 
+    print('')
+    print('')
     print('City mismatches:')
     for zipcode, mismatched_names in city_mismatches_by_zip.iteritems():
         print('%s: [%s] vs %s' % (zipcode, zipcode_map[zipcode].city, city_mismatches_by_zip[zipcode]))
 
+    print('')
+    print('')
     print('State mismatches:')
     for zipcode, mismatched_names in state_mismatches_by_zip.iteritems():
         print('%s: [%s] vs %s' % (zipcode, zipcode_map[zipcode].state, state_mismatches_by_zip[zipcode]))
 
+    print('')
+    print('')
     print('Unknown zips:')
     pprint.pprint(unknown_zips)
 
