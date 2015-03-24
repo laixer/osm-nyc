@@ -33,7 +33,7 @@ class StreetNameCanonicalSuffixCleaner(object):
         'East': {'EAST'},
         'Expressway': {},
         'Extension': {},
-        'Finest': {},  # Avenue of the finest
+        'Finest': {},  # Avenue of the Finest
         'Heights': {},
         'Highway': {'Hwy'},
         'Lane': {'LANE'},
