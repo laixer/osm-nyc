@@ -119,57 +119,52 @@ def clean_postcode(postcode):
     return postcode.strip()
 
 
-def process_map(file_in, dry_run=False):
+def process_map(file_in):
     street_types = defaultdict(set)
     street_name_cleaners = [StreetNameCanonicalSuffixCleaner(), StreetNameAvenueXCleaner()]
-
 
     zipcode_map = load_zipcode_data()
     city_mismatches_by_zip = defaultdict(set)
     state_mismatches_by_zip = defaultdict(set)
     unknown_zips = set()
 
-    file_out = '{0}.json'.format(file_in)
-    # TODO(laixer): Don't open file when in dry_run mode
-    with codecs.open(file_out, 'w') as fo:
-        for _, element in ElementTree.iterparse(file_in):
-            el = shape_element(element)
-            if el:
-                if "address" in el:
-                    if "street" in el["address"]:
-                        el["address"]["street"] = clean_street_type(
-                            street_types, el["address"]["street"], street_name_cleaners)
-                    if "state" in el["address"]:
-                        state = el["address"].get("state", None)
-                        if state:
-                            state = state.upper()
-                            if state == 'NEW YORK':
-                                state = 'NY'
-                            elif state == 'NEW JERSEY':
-                                state = 'NJ'
-                            elif state == 'CONNECTICUT':
-                                state = 'CT'
-                            el["address"]["state"] = state
-                    if "postcode" in el["address"]:
-                        el["address"]["postcode"] = clean_postcode(el["address"]["postcode"])
-                        postcode_short = el["address"]["postcode"]
-                        zipcode_m = ZIPCODE_RE.search(postcode_short)
-                        if zipcode_m:
-                            postcode_short = zipcode_m.group(2)
-                        city = el["address"].get("city", None)
-                        state = el["address"].get("state", None)
-                        zipcode_data = zipcode_map.get(postcode_short, None)
-                        if zipcode_data:
-                            if city and city != zipcode_data.city:
-                                city_mismatches_by_zip[postcode_short].add(city)
-                            if state and state != zipcode_data.state:
-                                state_mismatches_by_zip[postcode_short].add(state)
-                            el["address"]["state"] = zipcode_data.state
-                            el["address"]["city"] = zipcode_data.city
-                        else:
-                            unknown_zips.add(postcode_short)
-                if not dry_run:
-                    fo.write(json.dumps(el) + '\n')
+    for _, element in ElementTree.iterparse(file_in):
+        el = shape_element(element)
+        if el:
+            if "address" in el:
+                if "street" in el["address"]:
+                    el["address"]["street"] = clean_street_type(
+                        street_types, el["address"]["street"], street_name_cleaners)
+                if "state" in el["address"]:
+                    state = el["address"].get("state", None)
+                    if state:
+                        state = state.upper()
+                        if state == 'NEW YORK':
+                            state = 'NY'
+                        elif state == 'NEW JERSEY':
+                            state = 'NJ'
+                        elif state == 'CONNECTICUT':
+                            state = 'CT'
+                        el["address"]["state"] = state
+                if "postcode" in el["address"]:
+                    el["address"]["postcode"] = clean_postcode(el["address"]["postcode"])
+                    postcode_short = el["address"]["postcode"]
+                    zipcode_m = ZIPCODE_RE.search(postcode_short)
+                    if zipcode_m:
+                        postcode_short = zipcode_m.group(2)
+                    city = el["address"].get("city", None)
+                    state = el["address"].get("state", None)
+                    zipcode_data = zipcode_map.get(postcode_short, None)
+                    if zipcode_data:
+                        if city and city != zipcode_data.city:
+                            city_mismatches_by_zip[postcode_short].add(city)
+                        if state and state != zipcode_data.state:
+                            state_mismatches_by_zip[postcode_short].add(state)
+                        el["address"]["state"] = zipcode_data.state
+                        el["address"]["city"] = zipcode_data.city
+                    else:
+                        unknown_zips.add(postcode_short)
+            yield el
     # print('')
     # print('')
     # print('Unclassified streets:')
@@ -221,8 +216,26 @@ def shape_element(element):
         return None
 
 
-if __name__ == '__main__':
-    process_map('new-york_new-york.osm', dry_run=False)
+def main(in_file, out_file, dry_run=False):
+    print('Processing [%s].' % in_file)
+    f = None
+    if not dry_run:
+        print('Writing output to [%s].' % out_file)
+        f = codecs.open(out_file, 'w')
+    else:
+        print('Running in dry_run mode.')
 
+    try:
+        it = process_map(in_file)
+        for el in it:
+            if f:
+                f.write(json.dumps(el))
+    finally:
+        if f:
+            f.close()
+    print('Done processing.')
+
+if __name__ == '__main__':
+    main('new-york_new-york.osm', 'new-york_new-york.json', dry_run=True)
 
 
